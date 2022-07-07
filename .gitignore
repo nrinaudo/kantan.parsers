@@ -1,0 +1,30 @@
+*.class
+*.log
+
+# sbt specific
+.cache/
+.history/
+.lib/
+dist/*
+target/
+lib_managed/
+src_managed/
+project/boot/
+project/plugins/project/
+.bsp
+
+# IDE
+.scala_dependencies
+.worksheet
+.ensime
+.ensime_cache
+.bloop
+.metals
+metals.sbt
+.vscode
+.idea/
+*.iml
+*.iws
+
+# Mac
+.DS_Store
