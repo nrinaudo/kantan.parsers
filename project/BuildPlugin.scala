@@ -1,12 +1,15 @@
+import de.heikoseeberger.sbtheader.AutomateHeaderPlugin
 import sbt._, Keys._
 import sbt.plugins.{JvmPlugin, SbtPlugin}
+import sbt.ScriptedPlugin.autoImport._
+import sbtrelease.ReleasePlugin, ReleasePlugin.autoImport._, ReleaseTransformations._, ReleaseKeys._
 
 object BuildPlugin extends AutoPlugin {
   override def trigger = allRequirements
 
   override def requires = JvmPlugin
 
-  override lazy val projectSettings = baseSettings
+  override lazy val projectSettings = baseSettings ++ releaseSettings
 
   def baseSettings: Seq[sbt.Def.Setting[_]] =
     Seq(
@@ -26,6 +29,32 @@ object BuildPlugin extends AutoPlugin {
           s"scm:git:git@github.com:nrinaudo/kantan.parsers.git"
         )
       ),
-      scalacOptions ++= Seq("-source", "future", "-Ykind-projector:underscores", "-deprecation", "-unchecked")
+      scalacOptions ++= Seq("-source", "future", "-Ykind-projector:underscores", "-deprecation", "-unchecked"),
+      publishTo := Some(
+        if(isSnapshot.value)
+          Opts.resolver.sonatypeSnapshots
+        else
+          Opts.resolver.sonatypeStaging
+      )
     )
+
+    def releaseSettings: Seq[Setting[_]] =
+      Seq(
+        releaseProcess := Seq[ReleaseStep](
+          checkSnapshotDependencies,
+          inquireVersions,
+          runClean,
+          releaseStepCommand("scalafmtCheck"),
+          releaseStepCommand("scalafmtSbtCheck"),
+          setReleaseVersion,
+          commitReleaseVersion,
+          tagRelease,
+          releaseStepCommand("publishSigned"),
+          releaseStepCommand("sonatypeReleaseAll"),
+          setNextVersion,
+          commitNextVersion,
+          pushChanges
+        )
+      )
+
 }

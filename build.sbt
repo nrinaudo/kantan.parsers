@@ -1,19 +1,20 @@
 lazy val root = Project(id = "kantan-parsers", base = file("."))
-  .settings(moduleName := "root")
   .settings(
-    publish         := {},
-    publishLocal    := {},
-    publishArtifact := false
+    moduleName     := "root",
+    publish / skip := true
   )
   .aggregate(core, examples)
 
 lazy val core = project
+  .enablePlugins(AutomateHeaderPlugin)
   .settings(moduleName := "kantan.parsers")
   .in(file("core"))
 
 lazy val examples = project
+  .enablePlugins(AutomateHeaderPlugin)
   .in(file("examples"))
   .settings(
-    libraryDependencies += "org.typelevel" %% "jawn-ast" % Versions.jawn
+    libraryDependencies += "org.typelevel" %% "jawn-ast" % Versions.jawn,
+    publish / skip      := true
   )
   .dependsOn(core)
