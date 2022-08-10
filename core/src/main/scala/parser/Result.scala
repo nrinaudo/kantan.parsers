@@ -1,3 +1,19 @@
+/*
+ * Copyright 2022 Nicolas Rinaudo
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 package kantan.parsers
 
 /** Result of a parsing operation.
@@ -9,7 +25,8 @@ package kantan.parsers
   * or not to try alternative parsers in a [[Parser.|]] call.
   *
   * Results also store an error message *even if they're successful*. This might seem a little odd, but is necessary to
-  * be able to provide good error messages for combinators such as [[Parser.filter]].
+  * be able to provide good error messages for combinators such as [[Parser.filter]] where we might turn a success into
+  * a failure after the fact.
   */
 enum Result[Token, +A]:
   case Ok(consumed: Boolean, value: Parsed[A], state: State[Token], message: Message)
