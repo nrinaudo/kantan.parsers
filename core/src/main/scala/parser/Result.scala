@@ -9,7 +9,8 @@ package kantan.parsers
   * or not to try alternative parsers in a [[Parser.|]] call.
   *
   * Results also store an error message *even if they're successful*. This might seem a little odd, but is necessary to
-  * be able to provide good error messages for combinators such as [[Parser.filter]].
+  * be able to provide good error messages for combinators such as [[Parser.filter]] where we might turn a success into
+  * a failure after the fact.
   */
 enum Result[Token, +A]:
   case Ok(consumed: Boolean, value: Parsed[A], state: State[Token], message: Message)

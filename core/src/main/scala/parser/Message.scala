@@ -3,10 +3,10 @@ package kantan.parsers
 /** Parser error message.
   *
   * An error message contains:
-  * - the index of the token at which the error was encountered.
-  * - the position (line and column) at which the error was encountered.
-  * - the token that cause the failure, as a string.
-  * - a list of the values that were expected.
+  *   - the index of the token at which the error was encountered.
+  *   - the position (line and column) at which the error was encountered.
+  *   - the token that cause the failure, as a string.
+  *   - a list of the values that were expected.
   */
 case class Message(offset: Int, pos: Position, input: String, expected: List[String]):
   def expecting(label: String): Message      = copy(expected = List(label))

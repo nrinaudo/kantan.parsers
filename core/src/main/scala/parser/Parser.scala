@@ -171,12 +171,14 @@ trait Parser[Token, +A]:
   // - Repeating parsers -----------------------------------------------------------------------------------------------
   // -------------------------------------------------------------------------------------------------------------------
 
-  def rep0: Parser[Token, Seq[A]] = this.rep | Parser.pure(List.empty)
+  def rep0: Parser[Token, Seq[A]] =
+    this.rep | Parser.pure(List.empty)
 
-  def rep: Parser[Token, Seq[A]] = for
-    head <- this
-    tail <- this.rep0
-  yield head +: tail
+  def rep: Parser[Token, Seq[A]] =
+    for
+      head <- this
+      tail <- this.rep0
+    yield head +: tail
 
   def repSep[Sep](sep: Parser[Token, Sep]): Parser[Token, Seq[A]] =
     val nonEmpty = (this ~ (sep *> this).rep0).map(_ +: _)
