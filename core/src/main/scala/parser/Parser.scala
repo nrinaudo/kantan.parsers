@@ -149,12 +149,12 @@ trait Parser[Token, +A]:
     */
   def |[AA >: A](p2: => Parser[Token, AA]): Parser[Token, AA] = state =>
     run(state) match
-      case Result.NonConsuming(result) =>
+      case Result.NonConsuming(result1) =>
         p2.run(state) match
           // Note that we only merge labels if both parsers are non-consuming. If we have consumed data, then the parser
           // is not one of the expected inputs, but *the* expected input that just happened to have failed.
-          case Result.NonConsuming(result) => result.mapMessage(_.mergeExpected(result.message))
-          case other                       => other
+          case Result.NonConsuming(result2) => result1.mapMessage(_.mergeExpected(result2.message))
+          case other                        => other
       case other => other
 
   def ~[B](p2: Parser[Token, B]): Parser[Token, (A, B)] = for
