@@ -3,6 +3,7 @@ import sbt._, Keys._
 import sbt.plugins.{JvmPlugin, SbtPlugin}
 import sbt.ScriptedPlugin.autoImport._
 import sbtrelease.ReleasePlugin, ReleasePlugin.autoImport._, ReleaseTransformations._, ReleaseKeys._
+import xerial.sbt.Sonatype.SonatypeKeys._
 
 object BuildPlugin extends AutoPlugin {
   override def trigger = allRequirements
@@ -13,6 +14,7 @@ object BuildPlugin extends AutoPlugin {
 
   def baseSettings: Seq[sbt.Def.Setting[_]] =
     Seq(
+      publishConfiguration := publishConfiguration.value.withOverwrite(true),
       organization         := "com.nrinaudo",
       organizationHomepage := Some(url("https://nrinaudo.github.io")),
       organizationName     := "Nicolas Rinaudo",
@@ -30,12 +32,7 @@ object BuildPlugin extends AutoPlugin {
         )
       ),
       scalacOptions ++= Seq("-source", "future", "-Ykind-projector:underscores", "-deprecation", "-unchecked"),
-      publishTo := Some(
-        if(isSnapshot.value)
-          Opts.resolver.sonatypeSnapshots
-        else
-          Opts.resolver.sonatypeStaging
-      )
+      publishTo := sonatypePublishToBundle.value
     )
 
     def releaseSettings: Seq[Setting[_]] =
@@ -50,7 +47,7 @@ object BuildPlugin extends AutoPlugin {
           commitReleaseVersion,
           tagRelease,
           releaseStepCommand("publishSigned"),
-          releaseStepCommand("sonatypeReleaseAll"),
+          releaseStepCommand("sonatypeBundleRelease"),
           setNextVersion,
           commitNextVersion,
           pushChanges
