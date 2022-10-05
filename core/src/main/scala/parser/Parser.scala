@@ -148,14 +148,13 @@ trait Parser[Token, +A]:
     * find the first result that actually consumes data.
     */
   def |[AA >: A](p2: => Parser[Token, AA]): Parser[Token, AA] = state =>
-    run(state) match
-      case Result.NonConsuming(result1) =>
-        p2.run(state) match
-          // Note that we only merge labels if both parsers are non-consuming. If we have consumed data, then the parser
-          // is not one of the expected inputs, but *the* expected input that just happened to have failed.
-          case Result.NonConsuming(result2) => result1.mapMessage(_.mergeExpected(result2.message))
-          case other                        => other
-      case other => other
+    run(state).recoverWith { error1 =>
+      if error1.consumed then error1
+      else
+        p2.run(state).recoverWith { error2 =>
+          error1.mapMessage(_.mergeExpected(error2.message))
+        }
+    }
 
   def ~[B](p2: Parser[Token, B]): Parser[Token, (A, B)] = for
     a <- this
@@ -197,8 +196,7 @@ trait Parser[Token, +A]:
     yield head +: tail
 
   def repSep[Sep](sep: Parser[Token, Sep]): Parser[Token, Seq[A]] =
-    val nonEmpty = (this ~ (sep *> this).rep0).map(_ +: _)
-    nonEmpty | Parser.pure(Seq.empty)
+    (this ~ (sep *> this).rep0).map(_ +: _)
 
 // - Base parsers ------------------------------------------------------------------------------------------------------
 // ---------------------------------------------------------------------------------------------------------------------

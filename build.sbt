@@ -8,6 +8,9 @@ lazy val root = Project(id = "kantan-parsers", base = file("."))
 lazy val core = project
   .enablePlugins(AutomateHeaderPlugin)
   .settings(moduleName := "kantan.parsers")
+  .settings(
+    libraryDependencies += "org.scalatest" %% "scalatest" % Versions.scalatest % "test"
+  )
   .in(file("core"))
 
 lazy val examples = project
