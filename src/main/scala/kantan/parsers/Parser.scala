@@ -27,11 +27,12 @@ package kantan.parsers
   * An important thing to realise is that parsers are non-backtracking by default. See the [[|]] documentation for
   * detailed information on the consequences of this design choice.
   */
-trait Parser[Token, +A]:
+trait Parser[Token, +A] {
+
   // - Main methods ----------------------------------------------------------------------------------------------------
   // -------------------------------------------------------------------------------------------------------------------
-  def run[Source](input: Source)(using AsTokens[Source, Token], SourceMap[Token]): Result[Token, A] = run(
-    State.init(input.asTokens)
+  def run[Source](input: Source)(implicit at: AsTokens[Source, Token], sm: SourceMap[Token]): Result[Token, A] = run(
+    State.init(AsTokens[Source, Token].asTokens(input))
   )
 
   protected def run(state: State[Token]): Result[Token, A]
@@ -63,10 +64,11 @@ trait Parser[Token, +A]:
     * result - `char('9')` would not even be attempted.
     */
   def filter(f: A => Boolean): Parser[Token, A] = state =>
-    run(state) match
+    run(state) match {
       case Result.Ok(_, parsed, _, msg) if !f(parsed.value) =>
         Result.Error(false, msg.copy(input = parsed.value.toString))
       case other => other
+    }
 
   def filterNot(f: A => Boolean): Parser[Token, A] = filter(f andThen (b => !b))
 
@@ -86,12 +88,14 @@ trait Parser[Token, +A]:
     * would not even be attempted.
     */
   def collect[B](f: PartialFunction[A, B]): Parser[Token, B] = state =>
-    run(state) match
+    run(state) match {
       case Result.Ok(consumed, parsed, state, msg) =>
-        f.lift(parsed.value) match
+        f.lift(parsed.value) match {
           case Some(b) => Result.Ok(consumed, parsed.copy(value = b), state, msg)
           case None    => Result.Error(false, msg.copy(input = parsed.value.toString, pos = parsed.start))
+        }
       case error: Result.Error[Token] => error
+    }
 
   // - Mapping ---------------------------------------------------------------------------------------------------------
   // -------------------------------------------------------------------------------------------------------------------
@@ -100,18 +104,20 @@ trait Parser[Token, +A]:
   def as[B](b: B): Parser[Token, B] = map(_ => b)
 
   def withPosition: Parser[Token, Parsed[A]] = state =>
-    run(state) match
+    run(state) match {
       case Result.Ok(consumed, parsed, state, msg) => Result.Ok(consumed, parsed.map(_ => parsed), state, msg)
       case failure: Result.Error[Token]            => failure
+    }
 
   // - Combining parsers -----------------------------------------------------------------------------------------------
   // -------------------------------------------------------------------------------------------------------------------
   def flatMap[B](f: A => Parser[Token, B]): Parser[Token, B] =
     state =>
-      run(state) match
+      run(state) match {
         case Result.Ok(true, parsed, rest, _)  => f(parsed.value).run(rest).consume.setStart(parsed.start)
         case Result.Ok(false, parsed, rest, _) => f(parsed.value).run(rest).setStart(parsed.start)
         case error: Result.Error[Token]        => error
+      }
 
   /** Attempts either this parser or the specified one.
     *
@@ -149,27 +155,27 @@ trait Parser[Token, +A]:
     */
   def |[AA >: A](p2: => Parser[Token, AA]): Parser[Token, AA] = state =>
     run(state).recoverWith { error1 =>
-      if error1.consumed then error1
+      if(error1.consumed) error1
       else
         p2.run(state).recoverWith { error2 =>
           error1.mapMessage(_.mergeExpected(error2.message))
         }
     }
 
-  def ~[B](p2: Parser[Token, B]): Parser[Token, (A, B)] = for
+  def ~[B](p2: Parser[Token, B]): Parser[Token, (A, B)] = for {
     a <- this
     b <- p2
-  yield (a, b)
+  } yield (a, b)
 
-  def *>[B](p2: Parser[Token, B]): Parser[Token, B] = for
+  def *>[B](p2: Parser[Token, B]): Parser[Token, B] = for {
     _ <- this
     b <- p2
-  yield b
+  } yield b
 
-  def <*[B](p2: Parser[Token, B]): Parser[Token, A] = for
+  def <*[B](p2: Parser[Token, B]): Parser[Token, A] = for {
     a <- this
     _ <- p2
-  yield a
+  } yield a
 
   // - Misc. -----------------------------------------------------------------------------------------------------------
   // -------------------------------------------------------------------------------------------------------------------
@@ -190,28 +196,31 @@ trait Parser[Token, +A]:
     this.rep | Parser.pure(List.empty)
 
   def rep: Parser[Token, Seq[A]] =
-    for
+    for {
       head <- this
       tail <- this.rep0
-    yield head +: tail
+    } yield head +: tail
 
   def repSep[Sep](sep: Parser[Token, Sep]): Parser[Token, Seq[A]] =
-    (this ~ (sep *> this).rep0).map(_ +: _)
+    (this ~ (sep *> this).rep0).map { case (head, tail) => head +: tail }
 
+  def repSep0[Sep](sep: Parser[Token, Sep]): Parser[Token, Seq[A]] =
+    this.repSep(sep) | Parser.pure(List.empty)
+}
 // - Base parsers ------------------------------------------------------------------------------------------------------
 // ---------------------------------------------------------------------------------------------------------------------
 
-object Parser:
+object Parser {
   // - Common operations -----------------------------------------------------------------------------------------------
   // -------------------------------------------------------------------------------------------------------------------
   def pure[Token, A](value: A): Parser[Token, A] = state =>
     Result.Ok(false, Parsed(value, state.pos, state.pos), state, Message.empty)
 
   def ap[Token, A, B](ff: Parser[Token, A => B]): Parser[Token, A] => Parser[Token, B] = fa =>
-    for
+    for {
       a <- fa
       f <- ff
-    yield f(a)
+    } yield f(a)
 
   // - Base parsers ----------------------------------------------------------------------------------------------------
   // -------------------------------------------------------------------------------------------------------------------
@@ -222,18 +231,19 @@ object Parser:
     TokenParser(f)
 
   def end[Token: SourceMap]: Parser[Token, Unit] = state =>
-    if state.isEOF then Result.Ok(false, Parsed((), state.pos, state.pos), state, Message.empty)
+    if(state.isEOF) Result.Ok(false, Parsed((), state.pos, state.pos), state, Message.empty)
     else Result.Error(false, Message(state, List("EOF")))
 
   def oneOf[Token, A](head: Parser[Token, A], tail: Parser[Token, A]*): Parser[Token, A] = tail.foldLeft(head)(_ | _)
 
-  def sequence[Token, A](parsers: List[Parser[Token, A]]): Parser[Token, List[A]] = parsers match
+  def sequence[Token, A](parsers: List[Parser[Token, A]]): Parser[Token, List[A]] = parsers match {
     case head :: tail =>
-      for
+      for {
         h <- head
         t <- sequence(tail)
-      yield h :: t
+      } yield h :: t
     case Nil => pure(Nil)
+  }
 
   // - String parsers --------------------------------------------------------------------------------------------------
   // -------------------------------------------------------------------------------------------------------------------
@@ -248,3 +258,4 @@ object Parser:
   def whitespace: Parser[Char, Char] = satisfy[Char](_.isWhitespace).label("whitespace")
 
   def identifier: Parser[Char, String] = (letter | digit | char('_')).rep.map(_.mkString)
+}

@@ -30,18 +30,22 @@ package kantan.parsers
   * One might imagine more complex scenarios, however. Typically, when splitting tokenization and parsing, you'll end up
   * working with tokens that know their position in the original source code.
   */
-trait SourceMap[Token]:
-  extension (token: Token)
-    def endsAt(current: Position): Position
-    def startsAt(current: Position): Position
+trait SourceMap[Token] {
+  def endsAt(token: Token, current: Position): Position
+  def startsAt(token: Token, current: Position): Position
+}
 
 // - Default instances -------------------------------------------------------------------------------------------------
 // ---------------------------------------------------------------------------------------------------------------------
-object SourceMap:
-  given SourceMap[Char] with
-    extension (token: Char)
-      def endsAt(current: Position) =
-        if token == '\n' then current.nextLine
-        else current.nextColumn
+object SourceMap {
 
-      def startsAt(current: Position) = current
+  def apply[Token](implicit sm: SourceMap[Token]): SourceMap[Token] = sm
+
+  implicit val char: SourceMap[Char] = new SourceMap[Char] {
+    def endsAt(token: Char, current: Position) =
+      if(token == '\n') current.nextLine
+      else current.nextColumn
+
+    def startsAt(token: Char, current: Position) = current
+  }
+}

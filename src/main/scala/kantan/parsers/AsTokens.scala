@@ -24,21 +24,21 @@ package kantan.parsers
   *
   * Strings, for example, can be turned into an array of characters at very little cost.
   */
-trait AsTokens[Source, Token]:
-  extension (source: Source) def asTokens: IndexedSeq[Token]
+trait AsTokens[Source, Token] {
+  def asTokens(source: Source): IndexedSeq[Token]
+}
 
-object AsTokens:
+object AsTokens {
+  def apply[Source, Token](implicit at: AsTokens[Source, Token]): AsTokens[Source, Token] = at
+
   /** Strings tokenize to arrays of characters. */
-  given AsTokens[String, Char] with
-    extension (source: String) def asTokens = IArray.from(source)
+  implicit val string: AsTokens[String, Char] = source => source.toArray.toIndexedSeq
 
   /** Indexed sequences are already tokenized. */
-  given [Token]: AsTokens[IndexedSeq[Token], Token] with
-    extension (source: IndexedSeq[Token]) def asTokens = source
+  implicit def indexedSeq[Token]: AsTokens[IndexedSeq[Token], Token] = source => source
 
-  given [Token]: AsTokens[Seq[Token], Token] with
-    extension (source: Seq[Token]) def asTokens = source.toIndexedSeq
+  implicit def seq[Token]: AsTokens[Seq[Token], Token] = source => source.toIndexedSeq
 
   // TODO: I'm not entirely clear yet why this is necessary and not taken care of by `AsTokens[Seq[Token]]`.
-  given [Token]: AsTokens[List[Token], Token] with
-    extension (source: List[Token]) def asTokens = source.toIndexedSeq
+  implicit def list[Token]: AsTokens[List[Token], Token] = source => source.toIndexedSeq
+}

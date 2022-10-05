@@ -24,15 +24,18 @@ package kantan.parsers
   *   - the token that cause the failure, as a string.
   *   - a list of the values that were expected.
   */
-case class Message(offset: Int, pos: Position, input: String, expected: List[String]):
+final case class Message(offset: Int, pos: Position, input: String, expected: List[String]) {
   def expecting(label: String): Message      = copy(expected = List(label))
   def mergeExpected(other: Message): Message = copy(expected = expected ++ other.expected)
+}
 
-object Message:
+object Message {
   def empty: Message = Message(0, Position.zero, "", List.empty)
 
   def apply[Token: SourceMap](state: State[Token], expected: List[String]): Message =
-    if state.isEOF then Message(state.offset, state.pos, "EOF", expected)
-    else
+    if(state.isEOF) Message(state.offset, state.pos, "EOF", expected)
+    else {
       val token = state.input(state.offset)
-      Message(state.offset, token.startsAt(state.pos), token.toString, expected)
+      Message(state.offset, SourceMap[Token].startsAt(token, state.pos), token.toString, expected)
+    }
+}

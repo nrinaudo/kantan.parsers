@@ -19,7 +19,8 @@ object BuildPlugin extends AutoPlugin {
       organizationHomepage := Some(url("https://nrinaudo.github.io")),
       organizationName     := "Nicolas Rinaudo",
       startYear            := Some(2022),
-      scalaVersion         := "3.1.3",
+      scalaVersion         := "2.13.10",
+      crossScalaVersions   := Seq("2.12.17", "2.13.10", "3.2.0"),
       licenses             := Seq("Apache-2.0" -> url("https://www.apache.org/licenses/LICENSE-2.0.html")),
       homepage             := Some(url(s"https://nrinaudo.github.io/kantan.parsers")),
       developers := List(
@@ -31,8 +32,8 @@ object BuildPlugin extends AutoPlugin {
           s"scm:git:git@github.com:nrinaudo/kantan.parsers.git"
         )
       ),
-      scalacOptions ++= Seq("-source", "future", "-Ykind-projector:underscores", "-deprecation", "-unchecked"),
-      publishTo := sonatypePublishToBundle.value
+      scalacOptions ++= Seq("-deprecation", "-unchecked"),
+      publishTo      := sonatypePublishToBundle.value
     )
 
     def releaseSettings: Seq[Setting[_]] =

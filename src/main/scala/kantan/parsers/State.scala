@@ -28,17 +28,20 @@ package kantan.parsers
   * complex tokens, this might not hold - think of space-separated ints: "1 2". You cannot guess the start position of
   * '2' just from '1': this doesn't tell you how many spaces there are before the next token starts.
   */
-case class State[Token: SourceMap](input: IndexedSeq[Token], offset: Int, pos: Position):
+case class State[Token: SourceMap](input: IndexedSeq[Token], offset: Int, pos: Position) {
 
   def isEOF: Boolean = offset >= input.length
 
-  def startsAt(parsed: Token): Position = parsed.startsAt(pos)
+  def startsAt(parsed: Token): Position = SourceMap[Token].startsAt(parsed, pos)
 
-  def consume(parsed: Token): State[Token] = copy(offset = offset + 1, parsed.endsAt(pos))
+  def consume(parsed: Token): State[Token] = copy(offset = offset + 1, pos = SourceMap[Token].endsAt(parsed, pos))
 
-  def consumeRep(parsed: Seq[Token]): State[Token] =
-    val newPos = parsed.foldLeft(pos)((curr, token) => token.endsAt(curr))
-    copy(offset = offset + parsed.length, newPos)
+  def consumeRep(parsed: Seq[Token]): State[Token] = {
+    val newPos = parsed.foldLeft(pos)((curr, token) => SourceMap[Token].endsAt(token, curr))
+    copy(offset = offset + parsed.length, pos = newPos)
+  }
+}
 
-object State:
+object State {
   def init[Token: SourceMap](tokens: IndexedSeq[Token]): State[Token] = State(tokens, 0, Position.zero)
+}

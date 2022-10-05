@@ -31,25 +31,26 @@ package kantan.parsers
   * `6` and `7` individually, and accumulate them in a list.
   */
 private class TokenParser[Token: SourceMap](parse: State[Token] => Result[Token, Token], pred: Token => Boolean)
-    extends Parser[Token, Token]:
+    extends Parser[Token, Token] {
 
   // - Parser methods --------------------------------------------------------------------------------------------------
   // -------------------------------------------------------------------------------------------------------------------
   def run(state: State[Token]): Result[Token, Token] = parse(state)
 
-  override def label(label: String): TokenParser[Token] = new TokenParser(run andThen (_.label(label)), pred)
-  override def backtrack                                = new TokenParser(run andThen (_.empty), pred)
+  override def label(label: String): TokenParser[Token] = new TokenParser(state => run(state).label(label), pred)
+  override def backtrack                                = new TokenParser(state => run(state).empty, pred)
 
   // - Repetition ------------------------------------------------------------------------------------------------------
   // -------------------------------------------------------------------------------------------------------------------
-  def rep(allowEmpty: Boolean): Parser[Token, Seq[Token]] = state =>
+  def rep(allowEmpty: Boolean): Parser[Token, Seq[Token]] = state => {
     val start = state.offset
-    val stop =
+    val stop = {
       val index = state.input.indexWhere(token => !pred(token), start)
-      if index < 0 then state.input.length
+      if(index < 0) state.input.length
       else index
+    }
 
-    if start < stop then
+    if(start < stop) {
       val value    = state.input.slice(start, stop)
       val newState = state.consumeRep(value)
 
@@ -60,29 +61,34 @@ private class TokenParser[Token: SourceMap](parse: State[Token] => Result[Token,
       val parsed = Parsed(value, state.startsAt(state.input(start)), newState.pos)
 
       Result.Ok(true, parsed, newState, Message.empty)
-    else if allowEmpty then Result.Ok(false, Parsed(List.empty, state.pos, state.pos), state, Message.empty)
+    }
+    else if(allowEmpty) Result.Ok(false, Parsed(List.empty, state.pos, state.pos), state, Message.empty)
     else Result.Error(false, Message(state, List.empty))
+  }
 
   override def rep = rep(false)
 
   override def rep0 = rep(true)
+}
 
-object TokenParser:
+private[parsers] object TokenParser {
   // - Basic parser ----------------------------------------------------------------------------------------------------
   // -------------------------------------------------------------------------------------------------------------------
 
   def apply[Token: SourceMap](pred: Token => Boolean): TokenParser[Token] = new TokenParser(
     state =>
-      if state.isEOF then Result.Error(false, Message(state, List.empty))
-      else
+      if(state.isEOF) Result.Error(false, Message(state, List.empty))
+      else {
         val value = state.input(state.offset)
 
-        if pred(value) then
+        if(pred(value)) {
           val newState = state.consume(value)
           val parsed   = Parsed(value, state.startsAt(value), newState.pos)
 
           Result.Ok(true, parsed, newState, Message.empty)
+        }
         else Result.Error(false, Message(state, List.empty))
-    ,
+      },
     pred
   )
+}

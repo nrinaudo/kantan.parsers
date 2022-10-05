@@ -1,23 +1,9 @@
-lazy val root = Project(id = "kantan-parsers", base = file("."))
-  .settings(
-    moduleName     := "root",
-    publish / skip := true
-  )
-  .aggregate(core, examples)
+enablePlugins(AutomateHeaderPlugin)
 
-lazy val core = project
-  .enablePlugins(AutomateHeaderPlugin)
-  .settings(moduleName := "kantan.parsers")
-  .settings(
-    libraryDependencies += "org.scalatest" %% "scalatest" % Versions.scalatest % "test"
-  )
-  .in(file("core"))
+name := "kantan.parsers"
 
-lazy val examples = project
-  .enablePlugins(AutomateHeaderPlugin)
-  .in(file("examples"))
-  .settings(
-    libraryDependencies += "org.typelevel" %% "jawn-ast" % Versions.jawn,
-    publish / skip      := true
-  )
-  .dependsOn(core)
+libraryDependencies ++= Seq(
+  "org.scalatest"     %% "scalatest"       % Versions.scalatest               % "test",
+  "org.scalatestplus" %% "scalacheck-1-17" % Versions.scalatestPlusScalacheck % "test",
+  "org.typelevel"     %% "jawn-ast"        % Versions.jawn                    % "test"
+)

@@ -29,91 +29,102 @@ package kantan.parsers.json.tokens
   * error messages, and this should, in theory, never fail.
   */
 
-import kantan.parsers.{Parsed, Parser as P, Position, Result, SourceMap}
-import P.*
+import kantan.parsers.{Parsed, Parser => P, Position, Result, SourceMap}
+import P._
 
+sealed trait JsonToken extends Product with Serializable {
+  override def toString: String = this match {
+    case JsonToken.Num(value)     => value.toString
+    case JsonToken.Str(value)     => "\"" + value.toString() + "\""
+    case JsonToken.Bool(value)    => value.toString
+    case JsonToken.Null           => "null"
+    case JsonToken.ArrayStart     => "["
+    case JsonToken.ArrayEnd       => "]"
+    case JsonToken.ObjStart       => "{"
+    case JsonToken.ObjEnd         => "}"
+    case JsonToken.ListSep        => ","
+    case JsonToken.FieldSep       => ":"
+    case JsonToken.Unknown(value) => value
+  }
+
+}
+
+object JsonToken {
 // Note how we're not parsing to A, but Parsed[A]: every token is going to be tagged with its position information.
-type Parser[A] = P[Char, Parsed[A]]
+  type Parser[A] = P[Char, Parsed[A]]
 
-enum JsonToken:
   // - Tokens ----------------------------------------------------------------------------------------------------------
   // -------------------------------------------------------------------------------------------------------------------
-  case Num(value: Double)
-  case Str(value: String)
-  case Bool(value: Boolean)
-  case Unknown(value: String)
-  case Null
-  case ArrayStart
-  case ArrayEnd
-  case ObjStart
-  case ObjEnd
-  case FieldSep
-  case ListSep
+  // I'm not happy about this, but Jawn stores numbers as string internally and I need to pass this to the constructor.
+  final case class Num(value: String) extends JsonToken
+  final case class Str(value: String) extends JsonToken
+  final case class Bool(value: Boolean) extends JsonToken
+  final case class Unknown(value: String) extends JsonToken
+  final case object Null extends JsonToken
+  final case object ArrayStart extends JsonToken
+  final case object ArrayEnd extends JsonToken
+  final case object ObjStart extends JsonToken
+  final case object ObjEnd extends JsonToken
+  final case object FieldSep extends JsonToken
+  final case object ListSep extends JsonToken
 
-  override def toString: String = this match
-    case Num(value)     => value.toString
-    case Str(value)     => s"\"value\""
-    case Bool(value)    => value.toString
-    case Null           => "null"
-    case ArrayStart     => "["
-    case ArrayEnd       => "]"
-    case ObjStart       => "{"
-    case ObjEnd         => "}"
-    case ListSep        => ","
-    case FieldSep       => ":"
-    case Unknown(value) => value
-
-object JsonToken:
   // - Mapping tokens to source position -------------------------------------------------------------------------------
   // -------------------------------------------------------------------------------------------------------------------
-  given SourceMap[Parsed[JsonToken]] with
-    extension (token: Parsed[JsonToken])
-      def endsAt(current: Position)   = token.end
-      def startsAt(current: Position) = token.start
+  implicit val sourceMap: SourceMap[Parsed[JsonToken]] = new SourceMap[Parsed[JsonToken]] {
+    override def endsAt(token: Parsed[JsonToken], current: Position)   = token.end
+    override def startsAt(token: Parsed[JsonToken], current: Position) = token.start
+  }
 
   // - Token parsers ---------------------------------------------------------------------------------------------------
   // -------------------------------------------------------------------------------------------------------------------
-  val num: Parser[JsonToken] =
+  val num: Parser[JsonToken] = {
     val number = digit.rep.map(_.mkString)
     val sign   = (string("-") | string("+")).?.map(_.getOrElse(""))
     val exponent =
-      (char(c => c == 'e' || c == 'E') *> (sign ~ number).map((s, n) => s"e$s$n")).?.map(_.getOrElse(""))
+      (char(c => c == 'e' || c == 'E') *> (sign ~ number).map { case (s, n) => s"e$s$n" }).?.map(_.getOrElse(""))
 
     val fractional = (char('.') *> number.map(n => s".$n")).?.map(_.getOrElse(""))
     val integral   = number
-    val value = for
+    val value = for {
       s <- sign
       i <- integral
       f <- fractional
       e <- exponent
-    yield s"$s$i$f$e".toDouble
+    } yield s"$s$i$f$e"
 
     value.map(JsonToken.Num.apply).withPosition
+  }
 
-  val str: Parser[JsonToken] =
+  val str: Parser[JsonToken] = {
+    val escapedChars =
+      Map('b' -> "\b", 'n' -> "\n", 'f' -> "\f", 'r' -> "\r", 't' -> "\t", '/' -> "/", '\\' -> "\\", '"' -> "\"")
+
     val isHexChar    = (c: Char) => c.isDigit || (c >= 'a' && c <= 'f') || (c >= 'A' && c <= 'F')
     val isStringChar = (c: Char) => c != '"' && c != '\\'
 
-    val stringChar   = char(c => c != '"' && c != '\\').map(_.toString)
-    val escapedChars = Set('b', 'n', 'f', 'r', 't', '/', '\\')
-    val escapedChar  = char(escapedChars.contains).map(_.toString)
-    val hexChar      = char(isHexChar)
-    val hexChars = for
+    val stringChar = char(c => c != '"' && c != '\\').map(_.toString)
+
+    val escapedChar = char(escapedChars.contains _).collect(escapedChars)
+    val hexChar     = char(isHexChar)
+    val hexChars = for {
+      _  <- char('u')
       c1 <- hexChar
       c2 <- hexChar
       c3 <- hexChar
       c4 <- hexChar
-    yield s"$c1$c2$c3$c4"
+    } yield Character.toChars(Integer.parseInt(s"$c1$c2$c3$c4", 16)).mkString
 
-    val escape = char('\\') *> (escapedChar | hexChars).map(s => s"\\$s")
+    val escape = char('\\') *> (escapedChar | hexChars)
 
     val parser = char('"') *> (stringChar | escape).rep0.map(_.mkString) <* char('"')
     parser.map(JsonToken.Str.apply).withPosition
+  }
 
-  val bool: Parser[JsonToken] =
+  val bool: Parser[JsonToken] = {
     val parser = string("true").as(true) | string("false").as(false)
 
     parser.map(JsonToken.Bool.apply).withPosition
+  }
 
   val nullToken: Parser[JsonToken] = string("null").as(JsonToken.Null).withPosition
 
@@ -129,7 +140,9 @@ object JsonToken:
 
   // - Global parser ---------------------------------------------------------------------------------------------------
   // -------------------------------------------------------------------------------------------------------------------
-  val parser: P[Char, Seq[Parsed[JsonToken]]] =
+  val parser: P[Char, Seq[Parsed[JsonToken]]] = {
     val token = num | str | bool | nullToken | arrayStart | arrayEnd | objStart | objEnd | listSep | fieldSep | unknown
 
     token.surroundedBy(whitespace.rep0).rep <* end
+  }
+}

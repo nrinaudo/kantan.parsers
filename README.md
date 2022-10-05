@@ -13,7 +13,7 @@ content. But kantan.parsers has been written to scratch a very specific itch: en
 is the person writing the content that will be parsed.
 
 The "issue" with normal parser libraries is they produce parsers that will fail on the first error: as soon as an
-unexepected character (or, in more advanced scenarios, a type error) is encountered, the entire process shuts down. 
+unexpected character (or, in more advanced scenarios, a type error) is encountered, the entire process shuts down. 
 If what you're trying to work with is a rich DSL used by domain experts, they'd likely appreciate the same kind of perks
 developers have grown used to:
 - syntax highlighting.
@@ -47,7 +47,7 @@ writing some if there is more interest in this library than my simple _see, it *
 
 ### Input type
 
-The `AsTokens` type class is used to abstract over the input type: kantan.parsers can work with any time that can be
+The `AsTokens` type class is used to abstract over the input type: kantan.parsers can work with any type that can be
 turned into an indexed sequence of tokens. For example, a `String` can easily be turned into an array of characters.
 
 Provided your input type has an instance of `AsTokens`, you can pass values of it directly to `Parser.run`.
@@ -70,7 +70,7 @@ character (`'f'`), then it's impossible for the second (`"bar"`) to be valid?
 If so, you have a non-backtracking parser, in which characters, once consumed, stay consumed, and if a branch of
 an `or` parser reads data, then the other one cannot be attempted.
 
-If not, you have a non-backtracking parser, and any failure in the left hand side of `or` will result in the right hand
+If not, you have a backtracking parser, and any failure in the left hand side of `or` will result in the right hand
 side being attempted.
 
 kantan.parsers is a non-backtracking parser, because this usually makes for faster parsers and better error messages.
@@ -81,7 +81,7 @@ val parser = string("foo") | string("foa")
 parser.run("foa")
 ```
 
-With a strictly non-backtracking parser, this will always fail, even though `"foa"` is perfectly valid input. Ideally,
+With a strictly non-backtracking parser, this will fail, even though `"foa"` is perfectly valid input. Ideally,
 you'd rewrite the parser so that there is no ambiguity - so that the left hand side and right hand side do not start
 the same way - but that's not always possible. In this scenario, you can make the left hand side backtracking (by using
 the `backtrack` method), and everything will behave as you'd expect.
@@ -125,4 +125,4 @@ This is straightforward for characters (and supported out of the box):
 It's perfectly possible (and, indeed, expected) to provide instances for language-specific tokens, provided tokens
 keep track of the positions in which they were found at the character level.
 
-This is relatively straightforward, as shown in `JsonToken` in the examples.
+This is relatively straightforward, as shown in `JsonToken` in the tests.
