@@ -1,3 +1,6 @@
+[![kantan.parsers Scala version support](https://index.scala-lang.org/nrinaudo/kantan.parsers/kantan.parsers/latest-by-scala-version.svg?platform=jvm)](https://index.scala-lang.org/nrinaudo/kantan.parsers/kantan.parsers)
+[![CI](https://github.com/nrinaudo/kantan.parsers/actions/workflows/cli.yml/badge.svg)](https://github.com/nrinaudo/kantan.parsers/actions/workflows/cli.yml)
+
 # kantan.parsers
 
 ## Why another library?
@@ -13,7 +16,7 @@ content. But kantan.parsers has been written to scratch a very specific itch: en
 is the person writing the content that will be parsed.
 
 The "issue" with normal parser libraries is they produce parsers that will fail on the first error: as soon as an
-unexpected character (or, in more advanced scenarios, a type error) is encountered, the entire process shuts down. 
+unexpected character (or, in more advanced scenarios, a type error) is encountered, the entire process shuts down.
 If what you're trying to work with is a rich DSL used by domain experts, they'd likely appreciate the same kind of perks
 developers have grown used to:
 - syntax highlighting.

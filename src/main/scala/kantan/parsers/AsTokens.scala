@@ -37,8 +37,5 @@ object AsTokens {
   /** Indexed sequences are already tokenized. */
   implicit def indexedSeq[Token]: AsTokens[IndexedSeq[Token], Token] = source => source
 
-  implicit def seq[Token]: AsTokens[Seq[Token], Token] = source => source.toIndexedSeq
-
-  // TODO: I'm not entirely clear yet why this is necessary and not taken care of by `AsTokens[Seq[Token]]`.
-  implicit def list[Token]: AsTokens[List[Token], Token] = source => source.toIndexedSeq
+  implicit def seq[Col[X] <: Seq[X], Token]: AsTokens[Col[Token], Token] = source => source.toIndexedSeq
 }

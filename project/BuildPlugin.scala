@@ -12,6 +12,11 @@ object BuildPlugin extends AutoPlugin {
 
   override lazy val projectSettings = baseSettings ++ releaseSettings
 
+  override def globalSettings = addCommandAlias(
+    "validate",
+    ";clean;scalafmtCheck;Test / scalafmtCheck;scalafmtSbtCheck;test"
+  )
+
   def baseSettings: Seq[sbt.Def.Setting[_]] =
     Seq(
       publishConfiguration := publishConfiguration.value.withOverwrite(true),
@@ -36,23 +41,21 @@ object BuildPlugin extends AutoPlugin {
       publishTo      := sonatypePublishToBundle.value
     )
 
-    def releaseSettings: Seq[Setting[_]] =
-      Seq(
-        releaseProcess := Seq[ReleaseStep](
-          checkSnapshotDependencies,
-          inquireVersions,
-          runClean,
-          releaseStepCommand("scalafmtCheck"),
-          releaseStepCommand("scalafmtSbtCheck"),
-          setReleaseVersion,
-          commitReleaseVersion,
-          tagRelease,
-          releaseStepCommand("publishSigned"),
-          releaseStepCommand("sonatypeBundleRelease"),
-          setNextVersion,
-          commitNextVersion,
-          pushChanges
-        )
+  def releaseSettings: Seq[Setting[_]] =
+    Seq(
+      releaseCrossBuild := true,
+      releaseProcess := Seq[ReleaseStep](
+        checkSnapshotDependencies,
+        inquireVersions,
+        runClean,
+        setReleaseVersion,
+        commitReleaseVersion,
+        tagRelease,
+        releaseStepCommand("publishSigned"),
+        releaseStepCommand("sonatypeBundleRelease"),
+        setNextVersion,
+        commitNextVersion,
+        pushChanges
       )
-
+    )
 }
