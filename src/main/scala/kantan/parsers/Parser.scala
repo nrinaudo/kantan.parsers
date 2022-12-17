@@ -202,19 +202,19 @@ trait Parser[Token, +A] {
   // - Repeating parsers -----------------------------------------------------------------------------------------------
   // -------------------------------------------------------------------------------------------------------------------
 
-  def rep0: Parser[Token, Seq[A]] =
+  def rep0: Parser[Token, List[A]] =
     this.rep | Parser.pure(List.empty)
 
-  def rep: Parser[Token, Seq[A]] =
+  def rep: Parser[Token, List[A]] =
     for {
       head <- this
       tail <- this.rep0
     } yield head +: tail
 
-  def repSep[Sep](sep: Parser[Token, Sep]): Parser[Token, Seq[A]] =
-    (this ~ (sep *> this).rep0).map { case (head, tail) => head +: tail }
+  def repSep[Sep](sep: Parser[Token, Sep]): Parser[Token, List[A]] =
+    (this ~ (sep *> this).rep0).map { case (head, tail) => head :: tail }
 
-  def repSep0[Sep](sep: Parser[Token, Sep]): Parser[Token, Seq[A]] =
+  def repSep0[Sep](sep: Parser[Token, Sep]): Parser[Token, List[A]] =
     this.repSep(sep) | Parser.pure(List.empty)
 }
 // - Base parsers ------------------------------------------------------------------------------------------------------
