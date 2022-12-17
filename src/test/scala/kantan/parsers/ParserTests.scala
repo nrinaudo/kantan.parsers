@@ -204,4 +204,20 @@ class ParserTests extends AnyFunSuite with Matchers with ParserMatchers {
 
     parser.run("foobarbaz") should succeedWith(Parsed("bar", Position(0, 3), Position(0, 6)))
   }
+
+  // - Filter tests ----------------------------------------------------------------------------------------------------
+  // -------------------------------------------------------------------------------------------------------------------
+  test("for-comprehensions allow decomposition") {
+    val p1 = string("foo")
+    val p2 = string("bar")
+    val p3 = string("baz")
+
+    val parser = for {
+      (t1, t2) <- p1 ~ p2
+      t3       <- p3
+    } yield ()
+
+    parser.run("foobarbaz") should succeedWith(())
+  }
+
 }

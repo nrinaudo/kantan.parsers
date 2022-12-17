@@ -70,6 +70,8 @@ trait Parser[Token, +A] {
       case other => other
     }
 
+  def withFilter(f: A => Boolean): Parser[Token, A] = filter(f)
+
   def filterNot(f: A => Boolean): Parser[Token, A] = filter(f andThen (b => !b))
 
   /** A [[filter]] and a [[map]] rolled into one.
