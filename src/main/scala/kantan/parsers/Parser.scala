@@ -31,7 +31,7 @@ trait Parser[Token, +A] {
 
   // - Main methods ----------------------------------------------------------------------------------------------------
   // -------------------------------------------------------------------------------------------------------------------
-  def run[Source](input: Source)(implicit at: AsTokens[Source, Token], sm: SourceMap[Token]): Result[Token, A] = run(
+  def parse[Source](input: Source)(implicit at: AsTokens[Source, Token], sm: SourceMap[Token]): Result[Token, A] = run(
     State.init(AsTokens[Source, Token].asTokens(input))
   )
 
