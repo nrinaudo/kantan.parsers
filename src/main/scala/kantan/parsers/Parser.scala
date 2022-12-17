@@ -190,9 +190,9 @@ trait Parser[Token, +A] {
   // - Misc. -----------------------------------------------------------------------------------------------------------
   // -------------------------------------------------------------------------------------------------------------------
 
-  def surroundedBy[B](p: Parser[Token, B]): Parser[Token, A] = between(p, p)
+  def surroundedBy(p: Parser[Token, Any]): Parser[Token, A] = between(p, p)
 
-  def between[Left, Right](left: Parser[Token, Left], right: Parser[Token, Right]): Parser[Token, A] =
+  def between(left: Parser[Token, Any], right: Parser[Token, Any]): Parser[Token, A] =
     left *> this <* right
 
   def backtrack: Parser[Token, A] = state => run(state).empty
