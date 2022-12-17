@@ -158,7 +158,8 @@ trait Parser[Token, +A] {
       if(error1.consumed) error1
       else
         p2.run(state).recoverWith { error2 =>
-          error1.mapMessage(_.mergeExpected(error2.message))
+          if(error2.consumed) error2
+          else error1.mapMessage(_.mergeExpected(error2.message))
         }
     }
 

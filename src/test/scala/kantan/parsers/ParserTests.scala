@@ -25,7 +25,7 @@ class ParserTests extends AnyFunSuite with Matchers with ParserMatchers {
 
   // - `|` tests -------------------------------------------------------------------------------------------------------
   // -------------------------------------------------------------------------------------------------------------------
-  test("lhs | rhs selects the successful case when one fails") {
+  test("lhs | rhs selects the successful case when one fails without consuming") {
     val lhs    = string("foo")
     val rhs    = string("bar")
     val parser = lhs | rhs
@@ -39,25 +39,49 @@ class ParserTests extends AnyFunSuite with Matchers with ParserMatchers {
     val rhs    = string("bar")
     val parser = lhs | rhs
 
-    parser.run("baz") should failWith("foo", "bar")
+    // neither lhs nor rhs consumed, it could be either.
+    parser.run("car") should failWith("foo", "bar")
+
+    // lhs did not consume, rhs did, so we were expecting rhs.
+    parser.run("baz") should failWith("bar")
+
+    // lhs consumed, so we were expecting lhs.
+    parser.run("faz") should failWith("foo")
   }
 
-  test("lhs | rhs fails if lhs consumes but fails and rhs succeeds") {
+  test("lhs | rhs succeeds or fails at the same time as lhs if lhs consumes") {
     val lhs    = string("foo")
     val rhs    = string("far")
     val parser = lhs | rhs
 
-    // We expect "foo" only here because a parser that starts consuming is, by definition, the right parser:
-    // no other will be attempted.
+    parser.run("foo") should succeedWith("foo")
     parser.run("far") should failWith("foo")
   }
 
-  test("lhs | rhs fails if lhs doesn't consume and fails and rhs succeeds") {
+  test("lhs.backtrack | rhs succeeds or fails at the same time as rhs if lhs fails") {
     val lhs    = string("foo").backtrack
     val rhs    = string("far")
     val parser = lhs | rhs
 
+    // neither lhs nor rhs consumed, it could be either.
+    parser.run("bar") should failWith("foo", "far")
+
+    // lhs did not consume, rhs did, so we were expecting rhs.
+    parser.run("for") should failWith("far")
+
     parser.run("far") should succeedWith("far")
+  }
+
+  test("lhs | rhs.backtrack fails with the expected message when both fail") {
+    val lhs    = string("foo")
+    val rhs    = string("bar").backtrack
+    val parser = lhs | rhs
+
+    // neither lhs nor rhs consumed, it could be either.
+    parser.run("baz") should failWith("foo", "bar")
+
+    // lhs consumed, so we're expecting lhs.
+    parser.run("far") should failWith("foo")
   }
 
   // - Composition tests -----------------------------------------------------------------------------------------------
