@@ -105,6 +105,8 @@ trait Parser[Token, +A] {
 
   def as[B](b: B): Parser[Token, B] = map(_ => b)
 
+  def void: Parser[Token, Unit] = map(_ => ())
+
   def withPosition: Parser[Token, Parsed[A]] = state =>
     run(state) match {
       case Result.Ok(consumed, parsed, state, msg) => Result.Ok(consumed, parsed.map(_ => parsed), state, msg)
@@ -164,6 +166,11 @@ trait Parser[Token, +A] {
           else error1.mapMessage(_.mergeExpected(error2.message))
         }
     }
+
+  def orElse[AA >: A](p2: => Parser[Token, AA]): Parser[Token, AA] = this | p2
+
+  def eitherOr[B](p2: Parser[Token, B]): Parser[Token, Either[B, A]] =
+    map(Right.apply) | p2.map(Left.apply)
 
   def ~[B](p2: => Parser[Token, B]): Parser[Token, (A, B)] = for {
     a <- this
