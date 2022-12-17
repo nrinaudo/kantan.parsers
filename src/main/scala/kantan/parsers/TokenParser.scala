@@ -24,7 +24,7 @@ package kantan.parsers
   * For example:
   * {{{
   * val parser = digit.rep
-  * parser.run("567")
+  * parser.parse("567")
   * }}}
   *
   * [[TokenParser]] will treat this as extracting the sub-sequence from index 0 to 3 in `567`, rather than parsing `5`,

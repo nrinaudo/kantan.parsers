@@ -19,5 +19,5 @@ package kantan.parsers.json.raw
 import kantan.parsers.json._
 
 class JsonParserTests extends JsonParserSuite {
-  override def parse(input: String) = jExp.run(input)
+  override def parse(input: String) = jExp.parse(input)
 }

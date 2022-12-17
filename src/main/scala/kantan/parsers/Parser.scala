@@ -31,7 +31,7 @@ trait Parser[Token, +A] {
 
   // - Main methods ----------------------------------------------------------------------------------------------------
   // -------------------------------------------------------------------------------------------------------------------
-  def run[Source](input: Source)(implicit at: AsTokens[Source, Token], sm: SourceMap[Token]): Result[Token, A] = run(
+  def parse[Source](input: Source)(implicit at: AsTokens[Source, Token], sm: SourceMap[Token]): Result[Token, A] = run(
     State.init(AsTokens[Source, Token].asTokens(input))
   )
 
@@ -56,7 +56,7 @@ trait Parser[Token, +A] {
     * Note that such parsers are, of necessity, backtracking. Consider the following admitedly silly example:
     * {{{
     * val parser = digit.filter(_ != '9') | char('9')
-    * parser.run("9")
+    * parser.parse("9")
     * }}}
     *
     * If [[filter]] didn't turn [[digit]] backtracking, then this parser would fail, even though `9` is perfectly valid
@@ -82,7 +82,7 @@ trait Parser[Token, +A] {
     *   case c if c != '9' => c.toInt
     * } | char('9').as(9)
     *
-    * parser.run("9")
+    * parser.parse("9")
     * }}}
     *
     * If [[collect]] didn't turn the parser backtracking, this would fail, even though `9` is valid input: [[digit]]
@@ -105,7 +105,7 @@ trait Parser[Token, +A] {
     * {{{
     * val parser = (string("foo") <* !char('1')) ~ digit
     *
-    * parser.run("foo2")
+    * parser.parse("foo2")
     * }}}
     * If `!char('1')` was non-backtracking, then:
     *   - `2` would be consumed and confirmed to not be `1`.
@@ -163,7 +163,7 @@ trait Parser[Token, +A] {
     * Consider the following example:
     * {{{
     * val parser =  string("foo") | string("bar")
-    * parser.run("foa")
+    * parser.parse("foa")
     * }}}
     *
     * It's perfectly impossible for `bar` to be a valid match here, and we know that as soon as we've started
@@ -175,7 +175,7 @@ trait Parser[Token, +A] {
     * It is sometimes necessary to override that behaviour. Take the following example:
     * {{{
     * val parser = string("foo") | string("foa")
-    * parser.run("foa")
+    * parser.parse("foa")
     * }}}
     *
     * We want this to succeed, but since `string("foo")` is non-backtracking, `string("foa")` will not be attempted. In
@@ -184,7 +184,7 @@ trait Parser[Token, +A] {
     * Finally, consider the following:
     * {{{
     * val parser = string("foo").backtrack | string("bar")
-    * parser.run("bar")
+    * parser.parse("bar")
     * }}}
     *
     * This will succeed: non-consuming successes will still result in the alternative parser being attempted, to try and

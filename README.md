@@ -53,7 +53,7 @@ writing some if there is more interest in this library than my simple _see, it *
 The `AsTokens` type class is used to abstract over the input type: kantan.parsers can work with any type that can be
 turned into an indexed sequence of tokens. For example, a `String` can easily be turned into an array of characters.
 
-Provided your input type has an instance of `AsTokens`, you can pass values of it directly to `Parser.run`.
+Provided your input type has an instance of `AsTokens`, you can pass values of it directly to `Parser.parse`.
 
 ### Backtracking
 
@@ -64,7 +64,7 @@ Consider the following example:
 
 ```scala
 val parser =  string("foo") | string("bar")
-parser.run("foa")
+parser.parse("foa")
 ```
 
 There's a decision to be made here: do we consider that if the first parser (`"foo"`) encountered at least one valid
@@ -81,7 +81,7 @@ But, sometimes, a strictly non-backtracking parser yields undesirable behaviours
 
 ```scala
 val parser = string("foo") | string("foa")
-parser.run("foa")
+parser.parse("foa")
 ```
 
 With a strictly non-backtracking parser, this will fail, even though `"foa"` is perfectly valid input. Ideally,
@@ -103,7 +103,7 @@ For example:
 
 ```scala
 val parser = foo.label("foo") | bar.label("bar")
-parser.run("lorem ipsum")
+parser.parse("lorem ipsum")
 ```
 
 Should this fail, kantan.parsers will be able to use the label information to generate an error message that looks like
