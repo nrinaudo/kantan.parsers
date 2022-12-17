@@ -162,17 +162,17 @@ trait Parser[Token, +A] {
         }
     }
 
-  def ~[B](p2: Parser[Token, B]): Parser[Token, (A, B)] = for {
+  def ~[B](p2: => Parser[Token, B]): Parser[Token, (A, B)] = for {
     a <- this
     b <- p2
   } yield (a, b)
 
-  def *>[B](p2: Parser[Token, B]): Parser[Token, B] = for {
+  def *>[B](p2: => Parser[Token, B]): Parser[Token, B] = for {
     _ <- this
     b <- p2
   } yield b
 
-  def <*[B](p2: Parser[Token, B]): Parser[Token, A] = for {
+  def <*[B](p2: => Parser[Token, B]): Parser[Token, A] = for {
     a <- this
     _ <- p2
   } yield a
