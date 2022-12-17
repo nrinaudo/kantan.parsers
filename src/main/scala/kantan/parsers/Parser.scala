@@ -260,5 +260,7 @@ object Parser {
   def digit: Parser[Char, Char]      = satisfy[Char](_.isDigit).label("digit")
   def whitespace: Parser[Char, Char] = satisfy[Char](_.isWhitespace).label("whitespace")
 
-  def identifier: Parser[Char, String] = (letter | digit | char('_')).rep.map(_.mkString)
+  def identifier: Parser[Char, String] =
+    ((letter | char('_')) ~ (letter | digit | char('_')).rep0).map { case (head, tail) => (head +: tail).mkString }
+
 }
