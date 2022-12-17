@@ -99,6 +99,39 @@ trait Parser[Token, +A] {
       case error: Result.Error[Token] => error
     }
 
+  /** Fails when this parser succeeds, and succeeds when it fails.
+    *
+    * The returned parser will always be backtracking. Consider the following example:
+    * {{{
+    * val parser = (string("foo") <* !char('1')) ~ digit
+    *
+    * parser.run("foo2")
+    * }}}
+    * If `!char('1')` was non-backtracking, then:
+    *   - `2` would be consumed and confirmed to not be `1`.
+    *   - the parser would then fail, because there is no digit to read.
+    */
+  def unary_! : Parser[Token, Unit] = {
+    def negate(expected: List[String]) = expected.map(label => s"not $label")
+    state =>
+      void.run(state) match {
+        case Result.Ok(_, parsed, _, msg) =>
+          Result.Error(
+            false,
+            msg.copy(
+              input = parsed.value.toString,
+              expected = negate(msg.expected)
+            )
+          )
+
+        case Result.Error(_, message) =>
+          Result.Ok(false, Parsed((), state.pos, state.pos), state, message)
+      }
+  }
+
+  @inline def !~(p2: Parser[Token, Any]): Parser[Token, A]    = notFollowedBy(p2)
+  def notFollowedBy(p2: Parser[Token, Any]): Parser[Token, A] = this <* !p2
+
   // - Mapping ---------------------------------------------------------------------------------------------------------
   // -------------------------------------------------------------------------------------------------------------------
   def map[B](f: A => B): Parser[Token, B] = state => run(state).map(f)

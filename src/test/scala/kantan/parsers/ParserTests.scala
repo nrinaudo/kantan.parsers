@@ -16,7 +16,7 @@
 
 package kantan.parsers
 
-import kantan.parsers.Parser.{char, string}
+import kantan.parsers.Parser.{char, digit, letter, string}
 import org.scalatest.funsuite.AnyFunSuite
 import org.scalatest.matchers.should.Matchers
 import org.scalatest.compatible.Assertion
@@ -220,4 +220,11 @@ class ParserTests extends AnyFunSuite with Matchers with ParserMatchers {
     parser.run("foobarbaz") should succeedWith(())
   }
 
+  test("! behaves as expected") {
+    val parser = (string("foo") <* !char('1')) ~ digit
+
+    parser.run("foo1") should failWith("not 1")
+    parser.run("foo2") should succeedWith(("foo", '2'))
+
+  }
 }
