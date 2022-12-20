@@ -17,11 +17,17 @@
 package kantan.parsers
 
 import kantan.parsers.Parser.{char, digit, letter, string}
+import org.scalacheck.Shrink
+import org.scalacheck.Gen.{alphaChar, alphaNumChar, numChar}
 import org.scalatest.funsuite.AnyFunSuite
 import org.scalatest.matchers.should.Matchers
 import org.scalatest.compatible.Assertion
+import org.scalatestplus.scalacheck.ScalaCheckPropertyChecks
 
-class ParserTests extends AnyFunSuite with Matchers with ParserMatchers {
+class ParserTests extends AnyFunSuite with Matchers with ParserMatchers with ScalaCheckPropertyChecks {
+
+  /** Disables shrinking of characters, as we quickly end up with nonsensical shrinking. */
+  implicit val shrinkChar: Shrink[Char] = Shrink.shrinkAny
 
   // - `|` tests -------------------------------------------------------------------------------------------------------
   // -------------------------------------------------------------------------------------------------------------------
@@ -225,6 +231,27 @@ class ParserTests extends AnyFunSuite with Matchers with ParserMatchers {
 
     parser.parse("foo1") should failWith("not 1")
     parser.parse("foo2") should succeedWith(("foo", '2'))
+  }
 
+  // - Letter & digit tests --------------------------------------------------------------------------------------------
+  // -------------------------------------------------------------------------------------------------------------------
+  test("Letters should be parsed as expected") {
+    forAll(alphaChar) { c =>
+      Parser.letter.parse(c.toString) should succeedWith(c)
+      Parser.digit.parse(c.toString) should failWith("digit")
+    }
+  }
+
+  test("Digits should be parsed as expected") {
+    forAll(numChar) { c =>
+      Parser.digit.parse(c.toString) should succeedWith(c)
+      Parser.letter.parse(c.toString) should failWith("letter")
+    }
+  }
+
+  test("Letters and digits should be parsed as expected") {
+    forAll(alphaNumChar) { c =>
+      (Parser.letter | Parser.digit).parse(c.toString) should succeedWith(c)
+    }
   }
 }

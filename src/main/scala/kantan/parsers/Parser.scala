@@ -295,9 +295,14 @@ object Parser {
 
   def char(c: Char): Parser[Char, Char]            = satisfy[Char](_ == c).label(c.toString)
   def char(f: Char => Boolean): Parser[Char, Char] = satisfy(f)
+  def charIn(cs: Iterable[Char]): Parser[Char, Char] = {
+    val chars = cs.toSet
 
-  def letter: Parser[Char, Char]     = satisfy[Char](_.isLetter).label("letter")
-  def digit: Parser[Char, Char]      = satisfy[Char](_.isDigit).label("digit")
+    satisfy(chars.contains)
+  }
+
+  def letter: Parser[Char, Char]     = (charIn('a' to 'z') | charIn('A' to 'Z')).label("letter")
+  def digit: Parser[Char, Char]      = (charIn('0' to '9')).label("digit")
   def whitespace: Parser[Char, Char] = satisfy[Char](_.isWhitespace).label("whitespace")
 
   def identifier: Parser[Char, String] =
