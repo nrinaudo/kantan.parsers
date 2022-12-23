@@ -31,7 +31,7 @@ trait Parser[Token, +A] {
 
   // - Main methods ----------------------------------------------------------------------------------------------------
   // -------------------------------------------------------------------------------------------------------------------
-  def run[Source](input: Source)(implicit at: AsTokens[Source, Token], sm: SourceMap[Token]): Result[Token, A] = run(
+  def parse[Source](input: Source)(implicit at: AsTokens[Source, Token], sm: SourceMap[Token]): Result[Token, A] = run(
     State.init(AsTokens[Source, Token].asTokens(input))
   )
 
@@ -70,6 +70,8 @@ trait Parser[Token, +A] {
       case other => other
     }
 
+  def withFilter(f: A => Boolean): Parser[Token, A] = filter(f)
+
   def filterNot(f: A => Boolean): Parser[Token, A] = filter(f andThen (b => !b))
 
   /** A [[filter]] and a [[map]] rolled into one.
@@ -97,11 +99,46 @@ trait Parser[Token, +A] {
       case error: Result.Error[Token] => error
     }
 
+  /** Fails when this parser succeeds, and succeeds when it fails.
+    *
+    * The returned parser will always be backtracking. Consider the following example:
+    * {{{
+    * val parser = (string("foo") <* !char('1')) ~ digit
+    *
+    * parser.run("foo2")
+    * }}}
+    * If `!char('1')` was non-backtracking, then:
+    *   - `2` would be consumed and confirmed to not be `1`.
+    *   - the parser would then fail, because there is no digit to read.
+    */
+  def unary_! : Parser[Token, Unit] = {
+    def negate(expected: List[String]) = expected.map(label => s"not $label")
+    state =>
+      void.run(state) match {
+        case Result.Ok(_, parsed, _, msg) =>
+          Result.Error(
+            false,
+            msg.copy(
+              input = parsed.value.toString,
+              expected = negate(msg.expected)
+            )
+          )
+
+        case Result.Error(_, message) =>
+          Result.Ok(false, Parsed((), state.pos, state.pos), state, message)
+      }
+  }
+
+  @inline def !~(p2: Parser[Token, Any]): Parser[Token, A]    = notFollowedBy(p2)
+  def notFollowedBy(p2: Parser[Token, Any]): Parser[Token, A] = this <* !p2
+
   // - Mapping ---------------------------------------------------------------------------------------------------------
   // -------------------------------------------------------------------------------------------------------------------
   def map[B](f: A => B): Parser[Token, B] = state => run(state).map(f)
 
   def as[B](b: B): Parser[Token, B] = map(_ => b)
+
+  def void: Parser[Token, Unit] = map(_ => ())
 
   def withPosition: Parser[Token, Parsed[A]] = state =>
     run(state) match {
@@ -158,21 +195,27 @@ trait Parser[Token, +A] {
       if(error1.consumed) error1
       else
         p2.run(state).recoverWith { error2 =>
-          error1.mapMessage(_.mergeExpected(error2.message))
+          if(error2.consumed) error2
+          else error1.mapMessage(_.mergeExpected(error2.message))
         }
     }
 
-  def ~[B](p2: Parser[Token, B]): Parser[Token, (A, B)] = for {
+  def orElse[AA >: A](p2: => Parser[Token, AA]): Parser[Token, AA] = this | p2
+
+  def eitherOr[B](p2: Parser[Token, B]): Parser[Token, Either[B, A]] =
+    map(Right.apply) | p2.map(Left.apply)
+
+  def ~[B](p2: => Parser[Token, B]): Parser[Token, (A, B)] = for {
     a <- this
     b <- p2
   } yield (a, b)
 
-  def *>[B](p2: Parser[Token, B]): Parser[Token, B] = for {
+  def *>[B](p2: => Parser[Token, B]): Parser[Token, B] = for {
     _ <- this
     b <- p2
   } yield b
 
-  def <*[B](p2: Parser[Token, B]): Parser[Token, A] = for {
+  def <*[B](p2: => Parser[Token, B]): Parser[Token, A] = for {
     a <- this
     _ <- p2
   } yield a
@@ -180,9 +223,9 @@ trait Parser[Token, +A] {
   // - Misc. -----------------------------------------------------------------------------------------------------------
   // -------------------------------------------------------------------------------------------------------------------
 
-  def surroundedBy[B](p: Parser[Token, B]): Parser[Token, A] = between(p, p)
+  def surroundedBy(p: Parser[Token, Any]): Parser[Token, A] = between(p, p)
 
-  def between[Left, Right](left: Parser[Token, Left], right: Parser[Token, Right]): Parser[Token, A] =
+  def between(left: Parser[Token, Any], right: Parser[Token, Any]): Parser[Token, A] =
     left *> this <* right
 
   def backtrack: Parser[Token, A] = state => run(state).empty
@@ -192,19 +235,19 @@ trait Parser[Token, +A] {
   // - Repeating parsers -----------------------------------------------------------------------------------------------
   // -------------------------------------------------------------------------------------------------------------------
 
-  def rep0: Parser[Token, Seq[A]] =
+  def rep0: Parser[Token, List[A]] =
     this.rep | Parser.pure(List.empty)
 
-  def rep: Parser[Token, Seq[A]] =
+  def rep: Parser[Token, List[A]] =
     for {
       head <- this
       tail <- this.rep0
     } yield head +: tail
 
-  def repSep[Sep](sep: Parser[Token, Sep]): Parser[Token, Seq[A]] =
-    (this ~ (sep *> this).rep0).map { case (head, tail) => head +: tail }
+  def repSep[Sep](sep: Parser[Token, Sep]): Parser[Token, List[A]] =
+    (this ~ (sep *> this).rep0).map { case (head, tail) => head :: tail }
 
-  def repSep0[Sep](sep: Parser[Token, Sep]): Parser[Token, Seq[A]] =
+  def repSep0[Sep](sep: Parser[Token, Sep]): Parser[Token, List[A]] =
     this.repSep(sep) | Parser.pure(List.empty)
 }
 // - Base parsers ------------------------------------------------------------------------------------------------------
@@ -252,10 +295,17 @@ object Parser {
 
   def char(c: Char): Parser[Char, Char]            = satisfy[Char](_ == c).label(c.toString)
   def char(f: Char => Boolean): Parser[Char, Char] = satisfy(f)
+  def charIn(cs: Iterable[Char]): Parser[Char, Char] = {
+    val chars = cs.toSet
 
-  def letter: Parser[Char, Char]     = satisfy[Char](_.isLetter).label("letter")
-  def digit: Parser[Char, Char]      = satisfy[Char](_.isDigit).label("digit")
-  def whitespace: Parser[Char, Char] = satisfy[Char](_.isWhitespace).label("whitespace")
+    satisfy(chars.contains)
+  }
 
-  def identifier: Parser[Char, String] = (letter | digit | char('_')).rep.map(_.mkString)
+  def letter: Parser[Char, Char]     = (charIn('a' to 'z') | charIn('A' to 'Z')).label("letter")
+  def digit: Parser[Char, Char]      = (charIn('0' to '9')).label("digit")
+  def whitespace: Parser[Char, Char] = (char(' ') | char('\t')).label("whitespace")
+
+  def identifier: Parser[Char, String] =
+    ((letter | char('_')) ~ (letter | digit | char('_')).rep0).map { case (head, tail) => (head +: tail).mkString }
+
 }

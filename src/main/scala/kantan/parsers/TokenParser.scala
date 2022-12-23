@@ -42,7 +42,7 @@ private class TokenParser[Token: SourceMap](parse: State[Token] => Result[Token,
 
   // - Repetition ------------------------------------------------------------------------------------------------------
   // -------------------------------------------------------------------------------------------------------------------
-  def rep(allowEmpty: Boolean): Parser[Token, Seq[Token]] = state => {
+  def rep(allowEmpty: Boolean): Parser[Token, List[Token]] = state => {
     val start = state.offset
     val stop = {
       val index = state.input.indexWhere(token => !pred(token), start)
@@ -51,7 +51,7 @@ private class TokenParser[Token: SourceMap](parse: State[Token] => Result[Token,
     }
 
     if(start < stop) {
-      val value    = state.input.slice(start, stop)
+      val value    = state.input.slice(start, stop).toList
       val newState = state.consumeRep(value)
 
       // There's an easy to miss trap here: the start position of the value we've just parsed is not necessarily

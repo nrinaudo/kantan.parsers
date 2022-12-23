@@ -21,9 +21,9 @@ import kantan.parsers.json._
 
 class TokenizedJsonParserTests extends JsonParserSuite {
   override def parse(input: String) =
-    JsonToken.parser.run(input) match {
+    JsonToken.parser.parse(input) match {
       case failure: Result.Error[_]                 => failure
-      case Result.Ok(_, Parsed(result, _, _), _, _) => jExp.run(result: Seq[Parsed[JsonToken]])
+      case Result.Ok(_, Parsed(result, _, _), _, _) => jExp.parse(result: Seq[Parsed[JsonToken]])
     }
 
 }
