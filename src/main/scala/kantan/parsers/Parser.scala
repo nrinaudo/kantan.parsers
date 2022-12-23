@@ -303,7 +303,7 @@ object Parser {
 
   def letter: Parser[Char, Char]     = (charIn('a' to 'z') | charIn('A' to 'Z')).label("letter")
   def digit: Parser[Char, Char]      = (charIn('0' to '9')).label("digit")
-  def whitespace: Parser[Char, Char] = satisfy[Char](_.isWhitespace).label("whitespace")
+  def whitespace: Parser[Char, Char] = (char(' ') | char('\t')).label("whitespace")
 
   def identifier: Parser[Char, String] =
     ((letter | char('_')) ~ (letter | digit | char('_')).rep0).map { case (head, tail) => (head +: tail).mkString }
