@@ -8,7 +8,7 @@ import xerial.sbt.Sonatype.SonatypeKeys._
 object BuildPlugin extends AutoPlugin {
   override def trigger = allRequirements
 
-  override def requires = JvmPlugin
+  override def requires = JvmPlugin && ReleasePlugin
 
   override lazy val projectSettings = baseSettings ++ releaseSettings
 
