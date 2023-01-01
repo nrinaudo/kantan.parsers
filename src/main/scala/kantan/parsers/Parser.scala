@@ -66,7 +66,7 @@ trait Parser[Token, +A] {
   def filter(f: A => Boolean): Parser[Token, A] = state =>
     run(state) match {
       case Result.Ok(_, parsed, _, msg) if !f(parsed.value) =>
-        Result.Error(false, msg.copy(input = parsed.value.toString))
+        Result.Error(false, msg.copy(input = Message.Input.None))
       case other => other
     }
 
@@ -94,7 +94,11 @@ trait Parser[Token, +A] {
       case Result.Ok(consumed, parsed, state, msg) =>
         f.lift(parsed.value) match {
           case Some(b) => Result.Ok(consumed, parsed.copy(value = b), state, msg)
-          case None    => Result.Error(false, msg.copy(input = parsed.value.toString, pos = parsed.start))
+          case None =>
+            Result.Error(
+              false,
+              msg.copy(input = Message.Input.None, pos = parsed.start)
+            )
         }
       case error: Result.Error[Token] => error
     }
@@ -119,7 +123,7 @@ trait Parser[Token, +A] {
           Result.Error(
             false,
             msg.copy(
-              input = parsed.value.toString,
+              input = Message.Input.None,
               expected = negate(msg.expected)
             )
           )
@@ -196,7 +200,8 @@ trait Parser[Token, +A] {
       else
         p2.run(state).recoverWith { error2 =>
           if(error2.consumed) error2
-          else error1.mapMessage(_.mergeExpected(error2.message))
+          else error2.mapMessage(_.mergeExpected(error1.message))
+
         }
     }
 

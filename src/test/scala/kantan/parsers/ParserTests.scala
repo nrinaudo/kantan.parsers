@@ -46,13 +46,13 @@ class ParserTests extends AnyFunSuite with Matchers with ParserMatchers with Sca
     val parser = lhs | rhs
 
     // neither lhs nor rhs consumed, it could be either.
-    parser.parse("car") should failWith("foo", "bar")
+    parser.parse("car") should (failWith("foo", "bar") and failOn('c') and failAt(0, 0))
 
     // lhs did not consume, rhs did, so we were expecting rhs.
-    parser.parse("baz") should failWith("bar")
+    parser.parse("baz") should (failWith("bar") and failOn('z') and failAt(0, 2))
 
     // lhs consumed, so we were expecting lhs.
-    parser.parse("faz") should failWith("foo")
+    parser.parse("faz") should (failWith("foo") and failOn('a') and failAt(0, 1))
   }
 
   test("lhs | rhs succeeds or fails at the same time as lhs if lhs consumes") {
@@ -61,7 +61,7 @@ class ParserTests extends AnyFunSuite with Matchers with ParserMatchers with Sca
     val parser = lhs | rhs
 
     parser.parse("foo") should succeedWith("foo")
-    parser.parse("far") should failWith("foo")
+    parser.parse("far") should (failWith("foo") and failOn('a') and failAt(0, 1))
   }
 
   test("lhs.backtrack | rhs succeeds or fails at the same time as rhs if lhs fails") {
@@ -70,10 +70,10 @@ class ParserTests extends AnyFunSuite with Matchers with ParserMatchers with Sca
     val parser = lhs | rhs
 
     // neither lhs nor rhs consumed, it could be either.
-    parser.parse("bar") should failWith("foo", "far")
+    parser.parse("bar") should (failWith("foo", "far") and failOn('b') and failAt(0, 0))
 
     // lhs did not consume, rhs did, so we were expecting rhs.
-    parser.parse("for") should failWith("far")
+    parser.parse("for") should (failWith("far") and failOn('o') and failAt(0, 1))
 
     parser.parse("far") should succeedWith("far")
   }
@@ -84,10 +84,10 @@ class ParserTests extends AnyFunSuite with Matchers with ParserMatchers with Sca
     val parser = lhs | rhs
 
     // neither lhs nor rhs consumed, it could be either.
-    parser.parse("baz") should failWith("foo", "bar")
+    parser.parse("baz") should (failWith("foo", "bar") and failOn('z') and failAt(0, 2))
 
     // lhs consumed, so we're expecting lhs.
-    parser.parse("far") should failWith("foo")
+    parser.parse("far") should (failWith("foo") and failOn('a') and failAt(0, 1))
   }
 
   // - Composition tests -----------------------------------------------------------------------------------------------
@@ -101,8 +101,8 @@ class ParserTests extends AnyFunSuite with Matchers with ParserMatchers with Sca
   test("lhs ~ rhs fails with the expected message when one fails") {
     val parser = string("foo") ~ string("bar")
 
-    parser.parse("fooboo") should failWith("bar")
-    parser.parse("faabar") should failWith("foo")
+    parser.parse("fooboo") should (failWith("bar") and failOn('o') and failAt(0, 4))
+    parser.parse("faabar") should (failWith("foo") and failOn('a') and failAt(0, 1))
   }
 
   // - `?` tests -------------------------------------------------------------------------------------------------------
@@ -152,7 +152,7 @@ class ParserTests extends AnyFunSuite with Matchers with ParserMatchers with Sca
   test("parser.rep fails when it finds no occurence") {
     val parser = string("foo").rep
 
-    parser.parse("bar") should failWith("foo")
+    parser.parse("bar") should (failWith("foo") and failOn('b') and failAt(0, 0))
   }
 
   test("parser.rep0 succeeds when it finds no occurence") {
@@ -164,7 +164,7 @@ class ParserTests extends AnyFunSuite with Matchers with ParserMatchers with Sca
   test("parser.repSep fails when it finds no occurence") {
     val parser = string("foo").repSep(char('.'))
 
-    parser.parse("bar") should failWith("foo")
+    parser.parse("bar") should (failWith("foo") and failOn('b') and failAt(0, 0))
   }
 
   test("parser.repSep0 succeeds when it finds no occurence") {
@@ -190,17 +190,17 @@ class ParserTests extends AnyFunSuite with Matchers with ParserMatchers with Sca
   test("parser.surroundedBy fails when not surrounded") {
     val parser = string("foo").surroundedBy(char('|'))
 
-    parser.parse("foo") should failWith("|")
-    parser.parse("|foo") should failWith("|")
-    parser.parse("foo|") should failWith("|")
+    parser.parse("foo") should (failWith("|") and failOn('f') and failAt(0, 0))
+    parser.parse("|foo") should (failWith("|") and failOnEof and failAt(0, 4))
+    parser.parse("foo|") should (failWith("|") and failOn('f') and failAt(0, 0))
   }
 
   test("parser.between fails when not surrounded") {
     val parser = string("foo").between(char('<'), char('>'))
 
-    parser.parse("foo") should failWith("<")
-    parser.parse("<foo") should failWith(">")
-    parser.parse("foo>") should failWith("<")
+    parser.parse("foo") should (failWith("<") and failOn('f') and failAt(0, 0))
+    parser.parse("<foo") should (failWith(">") and failOnEof and failAt(0, 4))
+    parser.parse("foo>") should (failWith("<") and failOn('f') and failAt(0, 0))
   }
 
   // - Position tests --------------------------------------------------------------------------------------------------
@@ -229,7 +229,7 @@ class ParserTests extends AnyFunSuite with Matchers with ParserMatchers with Sca
   test("! behaves as expected") {
     val parser = (string("foo") <* !char('1')) ~ digit
 
-    parser.parse("foo1") should failWith("not 1")
+    parser.parse("foo1") should (failWith("not 1") and failOnNothing and failAt(0, 0))
     parser.parse("foo2") should succeedWith(("foo", '2'))
   }
 
