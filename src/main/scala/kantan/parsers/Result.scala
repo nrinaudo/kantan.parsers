@@ -34,7 +34,7 @@ sealed trait Result[Token, +A] {
     case failure: Result.Error[Token] => f(failure)
   }
 
-  def toEither: Either[Message, A] = this match {
+  def toEither: Either[Message[Token], A] = this match {
     case Result.Ok(_, parsed, _, _) => Right(parsed.value)
     case Result.Error(_, msg)       => Left(msg)
   }
@@ -47,7 +47,7 @@ sealed trait Result[Token, +A] {
 // - Common properties -----------------------------------------------------------------------------------------------
 // -------------------------------------------------------------------------------------------------------------------
   def consumed: Boolean
-  def message: Message
+  def message: Message[Token]
 
 // - Label handling --------------------------------------------------------------------------------------------------
 // -------------------------------------------------------------------------------------------------------------------
@@ -55,7 +55,7 @@ sealed trait Result[Token, +A] {
 
 // - Mapping ---------------------------------------------------------------------------------------------------------
 // -------------------------------------------------------------------------------------------------------------------
-  def mapMessage(f: Message => Message): Result[Token, A] = this match {
+  def mapMessage(f: Message[Token] => Message[Token]): Result[Token, A] = this match {
     case ok: Result.Ok[Token, A]    => ok.copy(message = f(message))
     case error: Result.Error[Token] => error.copy(message = f(message))
   }
@@ -82,7 +82,7 @@ sealed trait Result[Token, +A] {
 }
 
 object Result {
-  final case class Ok[Token, A](consumed: Boolean, value: Parsed[A], state: State[Token], message: Message)
+  final case class Ok[Token, A](consumed: Boolean, value: Parsed[A], state: State[Token], message: Message[Token])
       extends Result[Token, A]
-  final case class Error[Token](consumed: Boolean, message: Message) extends Result[Token, Nothing]
+  final case class Error[Token](consumed: Boolean, message: Message[Token]) extends Result[Token, Nothing]
 }
