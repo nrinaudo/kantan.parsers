@@ -300,17 +300,22 @@ object Parser {
 
   def char(c: Char): Parser[Char, Char]            = satisfy[Char](_ == c).label(c.toString)
   def char(f: Char => Boolean): Parser[Char, Char] = satisfy(f)
+  def charIn(cs: Char*): Parser[Char, Char]        = charIn(cs)
   def charIn(cs: Iterable[Char]): Parser[Char, Char] = {
     val chars = cs.toSet
 
     satisfy(chars.contains)
   }
 
-  def letter: Parser[Char, Char]     = (charIn('a' to 'z') | charIn('A' to 'Z')).label("letter")
-  def digit: Parser[Char, Char]      = (charIn('0' to '9')).label("digit")
-  def whitespace: Parser[Char, Char] = (char(' ') | char('\t')).label("whitespace")
+  private val letters = ('a' to 'z') ++ ('A' to 'Z')
+  private val digits  = '0' to '9'
 
-  def identifier: Parser[Char, String] =
-    ((letter | char('_')) ~ (letter | digit | char('_')).rep0).map { case (head, tail) => (head +: tail).mkString }
+  val letter: Parser[Char, Char]     = charIn(letters).label("letter")
+  val digit: Parser[Char, Char]      = charIn(digits).label("digit")
+  val whitespace: Parser[Char, Char] = charIn(' ', '\t').label("whitespace")
 
+  val identifier: Parser[Char, String] =
+    (charIn(letters :+ '_') ~ charIn(letters ++ digits :+ '_').rep0).map { case (head, tail) =>
+      (head +: tail).mkString
+    }
 }
