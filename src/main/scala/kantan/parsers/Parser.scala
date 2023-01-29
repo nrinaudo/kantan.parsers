@@ -293,11 +293,8 @@ object Parser {
     case Nil => pure(Nil)
   }
 
-  // - String parsers --------------------------------------------------------------------------------------------------
+  // - Char parsers ----------------------------------------------------------------------------------------------------
   // -------------------------------------------------------------------------------------------------------------------
-
-  def string(s: String): Parser[Char, String] = sequence(s.toList.map(char)).map(_.mkString).label(s)
-
   def char(c: Char): Parser[Char, Char]            = satisfy[Char](_ == c).label(c.toString)
   def char(f: Char => Boolean): Parser[Char, Char] = satisfy(f)
   def charIn(cs: Char*): Parser[Char, Char]        = charIn(cs)
@@ -313,6 +310,10 @@ object Parser {
   val letter: Parser[Char, Char]     = charIn(letters).label("letter")
   val digit: Parser[Char, Char]      = charIn(digits).label("digit")
   val whitespace: Parser[Char, Char] = charIn(' ', '\t').label("whitespace")
+
+  // - String parsers --------------------------------------------------------------------------------------------------
+  // -------------------------------------------------------------------------------------------------------------------
+  def string(s: String): Parser[Char, String] = new TokenListParser(s).as(s).label(s)
 
   val identifier: Parser[Char, String] =
     (charIn(letters :+ '_') ~ charIn(letters ++ digits :+ '_').rep0).map { case (head, tail) =>
