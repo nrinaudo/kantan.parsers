@@ -67,18 +67,16 @@ sealed trait Result[Token, +A] {
 
 // - Backtrack handling ----------------------------------------------------------------------------------------------
 // -------------------------------------------------------------------------------------------------------------------
-  /** Marks this result as consuming. */
-  def consume: Result[Token, A] = this match {
-    case ok: Result.Ok[Token, A]  => ok.copy(consumed = true)
-    case err: Result.Error[Token] => err.copy(consumed = true)
+  def consumed(b: Boolean): Result[Token, A] = this match {
+    case ok: Result.Ok[Token, A]  => ok.copy(consumed = b)
+    case err: Result.Error[Token] => err.copy(consumed = b)
   }
+
+  /** Marks this result as consuming. */
+  def consume: Result[Token, A] = consumed(true)
 
   /** Marks this result as non-consuming. */
-  def empty: Result[Token, A] = this match {
-    case ok: Result.Ok[Token, A]  => ok.copy(consumed = false)
-    case err: Result.Error[Token] => err.copy(consumed = false)
-  }
-
+  def empty: Result[Token, A] = consumed(false)
 }
 
 object Result {
